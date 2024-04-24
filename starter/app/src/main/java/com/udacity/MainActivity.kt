@@ -46,6 +46,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.contentMain.customButton.setOnClickListener {
+            binding.contentMain.customButton.updateState(ButtonState.Clicked)
+
             download()
         }
     }
