@@ -83,6 +83,8 @@ class MainActivity : AppCompatActivity() {
                     else -> "Failed"
                 }
 
+                binding.contentMain.customButton.updateState(ButtonState.Completed)
+
                 val notificationManager = ContextCompat.getSystemService(
                     applicationContext,
                     NotificationManager::class.java

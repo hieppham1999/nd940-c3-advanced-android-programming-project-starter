@@ -11,6 +11,7 @@ import android.view.View
 import android.view.animation.AccelerateInterpolator
 import androidx.core.content.ContextCompat.getColor
 import kotlin.properties.Delegates
+import kotlin.time.Duration.Companion.INFINITE
 
 class LoadingButton @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -117,6 +118,8 @@ class LoadingButton @JvmOverloads constructor(
 
     private fun animateProgressBar() {
         valueAnimator = ValueAnimator.ofFloat(0f, widthSize.toFloat()).apply {
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.RESTART
             duration = 1500
             interpolator = AccelerateInterpolator()
             addUpdateListener { animator ->
@@ -124,19 +127,12 @@ class LoadingButton @JvmOverloads constructor(
                 arcSweepAngle =  360f / widthSize  * animator.animatedValue as Float
                 invalidate()
             }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    super.onAnimationEnd(animation)
-                    updateState(ButtonState.Completed)
-
-                }
-            }
-            )
             start()
         }
     }
 
     private fun resetAnimation() {
+        valueAnimator.cancel()
         progressBarWidth = 0F
         arcSweepAngle = arcStartAngle
     }
