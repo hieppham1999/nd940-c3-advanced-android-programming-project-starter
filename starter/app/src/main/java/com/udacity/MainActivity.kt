@@ -7,15 +7,19 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.udacity.databinding.ActivityMainBinding
 import com.udacity.util.sendNotification
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,11 +30,21 @@ class MainActivity : AppCompatActivity() {
     private var selectedOption: AppDownloadOption? = null
     private var lastRepoDownload: AppDownloadOption? = null
 
+    val PERMISSION_REQUEST_CODE = 112
+
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+
+        if (Build.VERSION.SDK_INT > 32) {
+            if (!shouldShowRequestPermissionRationale("112")){
+                getNotificationPermission();
+            }
+        }
 
         registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
 
@@ -83,18 +97,60 @@ class MainActivity : AppCompatActivity() {
                     else -> "Failed"
                 }
 
+                binding.contentMain.customButton.updateState(ButtonState.Completed)
+
+
+
                 val notificationManager = ContextCompat.getSystemService(
                     applicationContext,
                     NotificationManager::class.java
                 ) as NotificationManager
 
-                notificationManager.sendNotification(
-                    getString(R.string.download_notification_channel_id),
-                    getString(R.string.notification_description),
-                    applicationContext,
-                    lastRepoDownload?.let { getString(it.title) } ?: "",
-                    statusString
+                if (notificationManager.areNotificationsEnabled()) {
+                    notificationManager.sendNotification(
+                        getString(R.string.download_notification_channel_id),
+                        getString(R.string.notification_description),
+                        applicationContext,
+                        lastRepoDownload?.let { getString(it.title) } ?: "",
+                        statusString
+                    )
+                }
+            }
+        }
+    }
+
+    private fun getNotificationPermission() {
+        try {
+            if (Build.VERSION.SDK_INT > 32) {
+                ActivityCompat.requestPermissions(
+                    this, arrayOf<String>(android.Manifest.permission.POST_NOTIFICATIONS),
+                    PERMISSION_REQUEST_CODE
                 )
+            }
+        } catch (e: Exception) {
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String?>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            PERMISSION_REQUEST_CODE -> {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.isNotEmpty() &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED
+                ) {
+                    // allow
+                } else {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(this, android.Manifest.permission.POST_NOTIFICATIONS)) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            getString(R.string.toast_notification_denied),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+                return
             }
         }
     }
@@ -124,8 +180,6 @@ class MainActivity : AppCompatActivity() {
             query.setFilterById(downloadID)
         }
     }
-
-
 
     private fun createChannel(channelId: String, channelName: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

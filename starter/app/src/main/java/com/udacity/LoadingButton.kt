@@ -1,7 +1,5 @@
 package com.udacity
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
@@ -10,6 +8,7 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.animation.AccelerateInterpolator
 import androidx.core.content.ContextCompat.getColor
+import androidx.core.content.withStyledAttributes
 import kotlin.properties.Delegates
 
 class LoadingButton @JvmOverloads constructor(
@@ -17,6 +16,11 @@ class LoadingButton @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
     private var widthSize = 0
     private var heightSize = 0
+
+    private var buttonBackgroundColor = 0
+    private var progressBarColor = 0
+    private var progressBarCircleColor = 0
+    private var buttonTextColor = 0
 
     private var valueAnimator = ValueAnimator()
     private var text = resources.getString(R.string.button_download)
@@ -45,40 +49,49 @@ class LoadingButton @JvmOverloads constructor(
         }
     }
 
+    private val backgroundPaintStyle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+
+    private val progressBarPaintStyle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+
+    private val textPaintStyle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 40f
+        textAlign = Paint.Align.CENTER
+    }
+
+    private val circlePaintStyle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
 
     init {
+        context.withStyledAttributes(attrs, R.styleable.LoadingButton) {
+            buttonBackgroundColor = getColor(R.styleable.LoadingButton_buttonBackgroundColor, 0)
+            progressBarColor = getColor(R.styleable.LoadingButton_progressBarColor, 0)
+            progressBarCircleColor = getColor(R.styleable.LoadingButton_progressBarCircleColor, 0)
+            buttonTextColor = getColor(R.styleable.LoadingButton_buttonTextColor, 0)
+
+            backgroundPaintStyle.color = buttonBackgroundColor
+            progressBarPaintStyle.color = progressBarColor
+            circlePaintStyle.color = progressBarCircleColor
+            textPaintStyle.color = buttonTextColor
+        }
+//        progressBarPaintStyle.color = backgroundColor
+
     }
 
     fun updateState(state: ButtonState) {
         buttonState  = state
     }
 
-    private val backgroundPaintStyle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = getColor(context,R.color.colorPrimary)
-    }
-
-    private val progressBarPaintStyle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = getColor(context,R.color.colorPrimaryDark)
-    }
-
-    private val textPaintStyle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 40f
-        color = getColor(context,R.color.white)
-        textAlign = Paint.Align.CENTER
-    }
-
-    private val circlePaintStyle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = getColor(context,R.color.colorAccent)
-    }
-
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
 
         canvas?.let {
-            backgroundPaintStyle.color =  getColor(context,R.color.colorPrimary)
+//            backgroundPaintStyle.color = backgroundColor
+
             // draw the background
             it.drawRect(0f, 0f, widthSize.toFloat(), heightSize.toFloat(), backgroundPaintStyle)
 
@@ -117,6 +130,8 @@ class LoadingButton @JvmOverloads constructor(
 
     private fun animateProgressBar() {
         valueAnimator = ValueAnimator.ofFloat(0f, widthSize.toFloat()).apply {
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.RESTART
             duration = 1500
             interpolator = AccelerateInterpolator()
             addUpdateListener { animator ->
@@ -124,19 +139,12 @@ class LoadingButton @JvmOverloads constructor(
                 arcSweepAngle =  360f / widthSize  * animator.animatedValue as Float
                 invalidate()
             }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    super.onAnimationEnd(animation)
-                    updateState(ButtonState.Completed)
-
-                }
-            }
-            )
             start()
         }
     }
 
     private fun resetAnimation() {
+        valueAnimator.cancel()
         progressBarWidth = 0F
         arcSweepAngle = arcStartAngle
     }
