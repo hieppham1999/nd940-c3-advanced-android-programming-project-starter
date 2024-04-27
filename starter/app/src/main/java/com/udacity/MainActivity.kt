@@ -1,18 +1,23 @@
 package com.udacity
 
 import android.app.DownloadManager
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.udacity.databinding.ActivityMainBinding
+import com.udacity.util.sendNotification
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,7 +39,10 @@ class MainActivity : AppCompatActivity() {
 
         registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
 
-        // TODO: Implement code below
+        createChannel(
+            getString(R.string.download_notification_channel_id),
+            getString(R.string.download_notification_channel_name),
+        )
 
         binding.contentMain.radioGroupApp.setOnCheckedChangeListener { _, checkedId ->
             selectedOption = when (checkedId) {
@@ -70,6 +78,16 @@ class MainActivity : AppCompatActivity() {
 
             val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
             downloadID = downloadManager.enqueue(request)// enqueue puts the download request in the queue.
+
+            val notificationManager = ContextCompat.getSystemService(
+                applicationContext,
+                NotificationManager::class.java
+            ) as NotificationManager
+            notificationManager.sendNotification(
+                getString(R.string.download_notification_channel_id),
+                getString(R.string.notification_description),
+                applicationContext
+            )
         } else {
             Toast.makeText(
                 this@MainActivity,
@@ -77,11 +95,29 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_SHORT
             ).show()
         }
-
-
     }
 
-    companion object {
-        private const val CHANNEL_ID = "channelId"
+
+
+    private fun createChannel(channelId: String, channelName: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationChannel = NotificationChannel(
+                channelId,
+                channelName,
+                // TODO: Step 2.4 change importance
+                NotificationManager.IMPORTANCE_LOW
+            )
+            // TODO: Step 2.6 disable badges for this channel
+
+            notificationChannel.enableLights(true)
+            notificationChannel.lightColor = Color.RED
+            notificationChannel.enableVibration(true)
+            notificationChannel.description = "Time for breakfast"
+
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(notificationChannel)
+
+
+        }
     }
 }
