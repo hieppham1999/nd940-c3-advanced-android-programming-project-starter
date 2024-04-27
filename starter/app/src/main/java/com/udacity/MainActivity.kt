@@ -25,11 +25,8 @@ class MainActivity : AppCompatActivity() {
 
     private var downloadID: Long = 0
 
-    private lateinit var notificationManager: NotificationManager
-    private lateinit var pendingIntent: PendingIntent
-    private lateinit var action: NotificationCompat.Action
-
     private var selectedOption: AppDownloadOption? = null
+    private var lastRepoDownload: AppDownloadOption? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,44 +53,77 @@ class MainActivity : AppCompatActivity() {
         binding.contentMain.customButton.setOnClickListener {
             binding.contentMain.customButton.updateState(ButtonState.Clicked)
 
-            download()
+            if (selectedOption == null) {
+                Toast.makeText(
+                    this@MainActivity,
+                    getString(R.string.button_download_select_nothing),
+                    Toast.LENGTH_SHORT
+                ).show()
+                binding.contentMain.customButton.updateState(ButtonState.Completed)
+            } else {
+                download()
+            }
         }
     }
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+
+            val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+
+            // Query the download manager about downloads that have been requested.
+            val query = DownloadManager.Query()
+            query.setFilterById(id!!)
+            val cursor = downloadManager.query(query)
+            if (cursor?.moveToFirst() == true) {
+                val columnIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                val status = cursor.getInt(columnIndex)
+
+                val statusString = when (status) {
+                    DownloadManager.STATUS_SUCCESSFUL -> "Success"
+                    else -> "Failed"
+                }
+
+                val notificationManager = ContextCompat.getSystemService(
+                    applicationContext,
+                    NotificationManager::class.java
+                ) as NotificationManager
+
+                notificationManager.sendNotification(
+                    getString(R.string.download_notification_channel_id),
+                    getString(R.string.notification_description),
+                    applicationContext,
+                    lastRepoDownload?.let { getString(it.title) } ?: "",
+                    statusString
+                )
+            }
         }
     }
 
     private fun download() {
-
-        if (selectedOption != null) {
-            val request = DownloadManager.Request(Uri.parse(selectedOption!!.url))
-                    .setTitle(getString(R.string.app_name))
-                    .setDescription(getString(R.string.app_description))
-                    .setRequiresCharging(false)
-                    .setAllowedOverMetered(true)
-                    .setAllowedOverRoaming(true)
-
-            val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-            downloadID = downloadManager.enqueue(request)// enqueue puts the download request in the queue.
+        selectedOption?.let {
+            lastRepoDownload = it
 
             val notificationManager = ContextCompat.getSystemService(
                 applicationContext,
                 NotificationManager::class.java
             ) as NotificationManager
-            notificationManager.sendNotification(
-                getString(R.string.download_notification_channel_id),
-                getString(R.string.notification_description),
-                applicationContext
-            )
-        } else {
-            Toast.makeText(
-                this@MainActivity,
-                getString(R.string.button_download_select_nothing),
-                Toast.LENGTH_SHORT
-            ).show()
+            notificationManager.cancelAll()
+
+            val request = DownloadManager.Request(Uri.parse(it.url))
+                .setTitle(getString(R.string.app_name))
+                .setDescription(getString(R.string.app_description))
+                .setRequiresCharging(false)
+                .setAllowedOverMetered(true)
+                .setAllowedOverRoaming(true)
+
+            val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            downloadID = downloadManager.enqueue(request)// enqueue puts the download request in the queue.
+
+            val query = DownloadManager.Query()
+            // set the query filter to our previously Enqueued download
+            query.setFilterById(downloadID)
         }
     }
 
@@ -104,15 +134,13 @@ class MainActivity : AppCompatActivity() {
             val notificationChannel = NotificationChannel(
                 channelId,
                 channelName,
-                // TODO: Step 2.4 change importance
                 NotificationManager.IMPORTANCE_LOW
             )
-            // TODO: Step 2.6 disable badges for this channel
 
             notificationChannel.enableLights(true)
             notificationChannel.lightColor = Color.RED
             notificationChannel.enableVibration(true)
-            notificationChannel.description = "Time for breakfast"
+            notificationChannel.description = "Repo Download State"
 
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(notificationChannel)

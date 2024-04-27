@@ -6,19 +6,25 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.udacity.DetailActivity
+import com.udacity.KEY_DOWNLOAD_FILE_NAME
+import com.udacity.KEY_DOWNLOAD_STATUS
 import com.udacity.R
 
 
 private const val NOTIFICATION_ID = 0
-fun NotificationManager.sendNotification(channelId: String, messageBody: String, applicationContext: Context) {
+fun NotificationManager.sendNotification(channelId: String, messageBody: String, applicationContext: Context, fileName: String, status: String) {
 
     val contentIntent = Intent(applicationContext, DetailActivity::class.java)
+
+    // put the file name and status
+    contentIntent.putExtra(KEY_DOWNLOAD_FILE_NAME, fileName)
+    contentIntent.putExtra(KEY_DOWNLOAD_STATUS, status)
 
     val contentPendingIntent = PendingIntent.getActivity(
         applicationContext,
         NOTIFICATION_ID,
         contentIntent,
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S)  PendingIntent.FLAG_IMMUTABLE else PendingIntent.FLAG_UPDATE_CURRENT
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 
     val builder = NotificationCompat.Builder(
@@ -28,8 +34,17 @@ fun NotificationManager.sendNotification(channelId: String, messageBody: String,
         .setSmallIcon(R.drawable.ic_assistant_black_24dp)
         .setContentTitle(applicationContext.getString(R.string.notification_title))
         .setContentText(messageBody)
-        .setContentIntent(contentPendingIntent)
         .setAutoCancel(true)
+        .addAction(
+            R.drawable.ic_assistant_black_24dp,
+            applicationContext.getString(R.string.notification_button),
+            contentPendingIntent
+        )
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
     notify(NOTIFICATION_ID, builder.build())
 
+}
+
+fun NotificationManager.cancelNotifications() {
+    cancelAll()
 }

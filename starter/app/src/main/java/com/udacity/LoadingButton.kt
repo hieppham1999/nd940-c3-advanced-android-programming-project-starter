@@ -35,10 +35,13 @@ class LoadingButton @JvmOverloads constructor(
             }
             ButtonState.Loading -> {
                 text = resources.getString(R.string.button_loading)
+                isEnabled = false
                 animateProgressBar()
             }
             ButtonState.Completed -> {
                 text = resources.getString(R.string.button_download)
+                isEnabled = true
+                resetAnimation()
                 invalidate()
             }
         }
@@ -124,23 +127,20 @@ class LoadingButton @JvmOverloads constructor(
                 invalidate()
             }
             addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationStart(animation: Animator) {
-                    super.onAnimationStart(animation)
-                    isEnabled = false
-                }
-
                 override fun onAnimationEnd(animation: Animator) {
                     super.onAnimationEnd(animation)
-                    isEnabled = true
                     updateState(ButtonState.Completed)
-                    progressBarWidth = 0F
-                    arcSweepAngle = arcStartAngle
 
                 }
             }
             )
             start()
         }
+    }
+
+    private fun resetAnimation() {
+        progressBarWidth = 0F
+        arcSweepAngle = arcStartAngle
     }
 
 }
